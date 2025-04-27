@@ -30,8 +30,9 @@ func main() {
 	})
 
 	// Роуты
-	r.POST("/send-form", handlers.HandleFormSubmit)
-	r.POST("/upload-file", handlers.HandleFileUpload)
+	r.POST("/send-form", handlers.HandleFormSubmit)            // Форма под маленький joinUs
+	r.POST("/send-brand-form", handlers.HandleBrandForm)       // Форма бренда
+	r.POST("/send-designer-form", handlers.HandleDesignerForm) // Форма дизайнера
 
 	log.Println("✅ Сервер запущен на порту 8080")
 	r.Run(":8080")
