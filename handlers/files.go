@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"os"
 
 	"backend/utils"
 
@@ -16,22 +15,8 @@ func HandleFileUpload(c *gin.Context) {
 		return
 	}
 
-	// Создаем папку tmp, если её нет
-	if err := os.MkdirAll("./tmp", 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания папки"})
-		return
-	}
-
-	tempPath := "./tmp/" + file.Filename
-	if err := c.SaveUploadedFile(file, tempPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сохранения файла"})
-		return
-	}
-	defer os.Remove(tempPath)
-
-	// Отправляем файл в Telegram
-	if err := utils.SendFileToTelegram(tempPath, "Файл от пользователя"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки файла"})
+	if err := utils.SaveAndSendFile(c, file, "Файл от пользователя"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

@@ -3,6 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"backend/utils"
 
@@ -38,10 +40,8 @@ func HandleFormSubmit(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "Успешно отправлено!"})
 }
 
-
-// Форма Бренда
+// Форма для брендов
 func HandleBrandForm(c *gin.Context) {
-
 	brandName := c.PostForm("brandName")
 	representative := c.PostForm("representative")
 	phone := c.PostForm("phone")
@@ -71,7 +71,22 @@ func HandleBrandForm(c *gin.Context) {
 		}
 	}
 
-	// Сообщение для Telegram
+	if lookbookFile != nil {
+		ext := strings.ToLower(filepath.Ext(lookbookFile.Filename))
+		if ext != ".png" && ext != ".pdf" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Лукбук должен быть PNG или PDF!"})
+			return
+		}
+	}
+
+	if trademarkFile != nil {
+		ext := strings.ToLower(filepath.Ext(trademarkFile.Filename))
+		if ext != ".png" && ext != ".pdf" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Свидетельство должно быть PNG или PDF!"})
+			return
+		}
+	}
+
 	message := fmt.Sprintf(`
 	🏢 *Новая заявка от Бренда* 🏢
 	———————————————
@@ -90,165 +105,98 @@ func HandleBrandForm(c *gin.Context) {
 		return
 	}
 
+	// Отправка файлов
 	if logoFile != nil {
 		if err := utils.SaveAndSendFile(c, logoFile, "Логотип бренда"); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки логотипа"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки логотипа: " + err.Error()})
 			return
 		}
 	}
 
 	if lookbookFile != nil {
 		if err := utils.SaveAndSendFile(c, lookbookFile, "Лукбук коллекции"); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки лукбука"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки лукбука: " + err.Error()})
 			return
 		}
 	}
 
 	if trademarkFile != nil {
 		if err := utils.SaveAndSendFile(c, trademarkFile, "Свидетельство на товарный знак"); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error":
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки свидетельства: " + err.Error()})
+			return
+		}
+	}
 
-
-func HandleDesignerForm(c *gin.Context) {
-    // Получаем данные формы
-    fullName := c.PostForm("fullName")
-    birthDate := c.PostForm("birthDate")
-    phone := c.PostForm("phone")
-    email := c.PostForm("email")
-    social := c.PostForm("social")
-    experience := c.PostForm("experience")
-    awards := c.PostForm("awards")
-
-    // Валидация обязательных полей
-    if fullName == "" || phone == "" || email == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "ФИО, телефон и email обязательны!"})
-        return
-    }
-
-    // Обработка файлов
-    logoFile, _ := c.FormFile("logo")
-    lookbookFile, _ := c.FormFile("lookbook")
-
-    // Проверка форматов файлов (PNG/PDF)
-    if logoFile != nil {
-        ext := strings.ToLower(filepath.Ext(logoFile.Filename))
-        if ext != ".png" && ext != ".pdf" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Логотип должен быть PNG или PDF!"})
-            return
-        }
-    }
-
-    if lookbookFile != nil {
-        ext := strings.ToLower(filepath.Ext(lookbookFile.Filename))
-        if ext != ".png" && ext != ".pdf" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Портфолио должно быть PNG или PDF!"})
-            return
-        }
-    }
-
-    // Формируем сообщение для Telegram
-    message := fmt.Sprintf(`
-    🎨 *Новая заявка от Дизайнера* 🎨
-    ———————————————
-    🔹 *ФИО:* %s
-    🔹 *Дата рождения:* %s
-    🔹 *Телефон:* %s
-    🔹 *Email:* %s
-    🔹 *Соцсети:* %s
-    🔹 *Опыт работы:* %s
-    🔹 *Награды:* %s
-    `, fullName, birthDate, phone, email, social, experience, awards)
-
-    // Отправляем текст
-    if err := utils.SendToTelegram(message); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки текста в Telegram"})
-        return
-    }
-
-    // Отправляем файлы (если есть)
-    if logoFile != nil {
-        if err := utils.SaveAndSendFile(c, logoFile, "Логотип дизайнера"); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки логотипа"})
-            return
-        }
-    }
-
-    if lookbookFile != nil {
-        if err := utils.SaveAndSendFile(c, lookbookFile, "Портфолио дизайнера"); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки портфолио"})
-            return
-        }
-    }
-
-    c.JSON(http.StatusOK, gin.H{"status": "✅ Форма дизайнера успешно отправлена!"})
+	c.JSON(http.StatusOK, gin.H{"status": "✅ Форма бренда успешно отправлена!"})
 }
 
-// Форма дизайнера 
+// Форма для дизайнеров
 func HandleDesignerForm(c *gin.Context) {
+	fullName := c.PostForm("fullName")
+	birthDate := c.PostForm("birthDate")
+	phone := c.PostForm("phone")
+	email := c.PostForm("email")
+	social := c.PostForm("social")
+	experience := c.PostForm("experience")
+	awards := c.PostForm("awards")
 
-    fullName := c.PostForm("fullName")
-    birthDate := c.PostForm("birthDate")
-    phone := c.PostForm("phone")
-    email := c.PostForm("email")
-    social := c.PostForm("social")
-    experience := c.PostForm("experience")
-    awards := c.PostForm("awards")
+	// Валидация обязательных полей
+	if fullName == "" || phone == "" || email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ФИО, телефон и email обязательны!"})
+		return
+	}
 
-    if fullName == "" || phone == "" || email == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "ФИО, телефон и email обязательны!"})
-        return
-    }
+	// Обработка файлов
+	logoFile, _ := c.FormFile("logo")
+	lookbookFile, _ := c.FormFile("lookbook")
 
-    logoFile, _ := c.FormFile("logo")
-    lookbookFile, _ := c.FormFile("lookbook")
+	// Проверка форматов файлов (PNG/PDF)
+	if logoFile != nil {
+		ext := strings.ToLower(filepath.Ext(logoFile.Filename))
+		if ext != ".png" && ext != ".pdf" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Логотип должен быть PNG или PDF!"})
+			return
+		}
+	}
 
-    if logoFile != nil {
-        ext := strings.ToLower(filepath.Ext(logoFile.Filename))
-        if ext != ".png" && ext != ".pdf" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Логотип должен быть PNG или PDF!"})
-            return
-        }
-    }
+	if lookbookFile != nil {
+		ext := strings.ToLower(filepath.Ext(lookbookFile.Filename))
+		if ext != ".png" && ext != ".pdf" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Портфолио должно быть PNG или PDF!"})
+			return
+		}
+	}
 
-    if lookbookFile != nil {
-        ext := strings.ToLower(filepath.Ext(lookbookFile.Filename))
-        if ext != ".png" && ext != ".pdf" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Портфолио должно быть PNG или PDF!"})
-            return
-        }
-    }
+	message := fmt.Sprintf(`
+	🎨 *Новая заявка от Дизайнера* 🎨
+	———————————————
+	🔹 *ФИО:* %s
+	🔹 *Дата рождения:* %s
+	🔹 *Телефон:* %s
+	🔹 *Email:* %s
+	🔹 *Соцсети:* %s
+	🔹 *Опыт работы:* %s
+	🔹 *Награды:* %s
+	`, fullName, birthDate, phone, email, social, experience, awards)
 
-    message := fmt.Sprintf(`
-    🎨 *Новая заявка от Дизайнера* 🎨
-    ———————————————
-    🔹 *ФИО:* %s
-    🔹 *Дата рождения:* %s
-    🔹 *Телефон:* %s
-    🔹 *Email:* %s
-    🔹 *Соцсети:* %s
-    🔹 *Опыт работы:* %s
-    🔹 *Награды:* %s
-    `, fullName, birthDate, phone, email, social, experience, awards)
+	if err := utils.SendToTelegram(message); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки текста в Telegram: " + err.Error()})
+		return
+	}
 
+	if logoFile != nil {
+		if err := utils.SaveAndSendFile(c, logoFile, "Логотип дизайнера"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки логотипа: " + err.Error()})
+			return
+		}
+	}
 
-    if err := utils.SendToTelegram(message); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки текста в Telegram"})
-        return
-    }
+	if lookbookFile != nil {
+		if err := utils.SaveAndSendFile(c, lookbookFile, "Портфолио дизайнера"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки портфолио: " + err.Error()})
+			return
+		}
+	}
 
-    if logoFile != nil {
-        if err := utils.SaveAndSendFile(c, logoFile, "Логотип дизайнера"); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки логотипа"})
-            return
-        }
-    }
-
-    if lookbookFile != nil {
-        if err := utils.SaveAndSendFile(c, lookbookFile, "Портфолио дизайнера"); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки портфолио"})
-            return
-        }
-    }
-
-    c.JSON(http.StatusOK, gin.H{"status": "✅ Форма дизайнера успешно отправлена!"})
+	c.JSON(http.StatusOK, gin.H{"status": "✅ Форма дизайнера успешно отправлена!"})
 }
