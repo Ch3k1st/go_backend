@@ -3,8 +3,10 @@ package utils
 import (
 	"fmt"
 	"log"
+	"mime/multipart"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -52,5 +54,25 @@ func SendFileToTelegram(filePath, caption string) error {
 	}
 
 	log.Println("✅ Файл отправлен в Telegram")
+	return nil
+}
+
+
+func SaveAndSendFile(c *gin.Context, fileHeader *multipart.FileHeader, caption string) error {
+
+	if err := os.MkdirAll("./tmp", 0755); err != nil {
+		return fmt.Errorf("ошибка создания папки: %v", err)
+	}
+
+	tempPath := "./tmp/" + fileHeader.Filename
+	if err := c.SaveUploadedFile(fileHeader, tempPath); err != nil {
+		return fmt.Errorf("ошибка сохранения файла: %v", err)
+	}
+	defer os.Remove(tempPath)
+
+	if err := SendFileToTelegram(tempPath, caption); err != nil {
+		return fmt.Errorf("ошибка отправки файла: %v", err)
+	}
+
 	return nil
 }
