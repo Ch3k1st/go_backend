@@ -37,7 +37,7 @@ func HandleFormSubmit(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "Успешно отправлено!"})
+	c.JSON(http.StatusOK, gin.H{"status": "Message sent"})
 }
 
 // Форма для брендов
