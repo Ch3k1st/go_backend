@@ -37,7 +37,7 @@ func HandleFormSubmit(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "Message sent"})
+	c.JSON(http.StatusOK, gin.H{"status": "Успешно отправлено!"})
 }
 
 // Форма для брендов
@@ -199,4 +199,37 @@ func HandleDesignerForm(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "✅ Форма дизайнера успешно отправлена!"})
+}
+
+// HandleConfirmationForm - обработчик формы подтверждения присутствия
+func HandleConfirmationForm(c *gin.Context) {
+    fullName := c.PostForm("fullName")
+    phone := c.PostForm("phone")
+    status := c.PostForm("status") // "Буду", "Буду, но опоздаю", "Не смогу прийти"
+
+    if fullName == "" || phone == "" || status == "" {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Все обязательные поля должны быть заполнены!",
+        })
+        return
+    }
+
+    message := fmt.Sprintf(`
+    🎟️ *Подтверждение присутствия*
+    ———————————————
+    👤 *ФИО:* %s
+    📞 *Телефон:* %s
+    ✅ *Статус:* %s
+    `, fullName, phone, status)
+
+    if err := utils.SendToTelegram(message); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Ошибка отправки подтверждения",
+        })
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "status": "Ваше присутствие успешно подтверждено!",
+    })
 }
